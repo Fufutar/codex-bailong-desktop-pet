@@ -193,6 +193,35 @@ class InteractionTests(unittest.TestCase):
             self.pet.quota();refresh.assert_called_once();interaction.assert_not_called()
         self.assertIs(self.pet.current,current);self.assertFalse(self.pet.settings['bubble']);self.assertFalse(self.pet.settings['quota_visible'])
         self.assertIn(self.pet.manifest['quotaAnimation'],self.pet.action_groups()['额度回应（不刷新数据）'])
+
+    def test_single_and_double_click_share_every_non_work_action(self):
+        def action(name):
+            return dict(id=name, file=name+'.webp')
+
+        idle, extra, variant, click, turn, move, drag, landing, quota, work = (
+            action(name) for name in ('idle', 'extra', 'variant', 'click', 'turn', 'move', 'drag', 'landing', 'quota', 'work'))
+        manifest = dict(idle=idle, additionalIdleAnimations=[extra], variants=[variant, click, work],
+                        clickAnimations=[click], turnAnimations=[turn], moveAnimations=[move],
+                        dragAnimation=drag, landingAnimation=landing, quotaAnimation=quota, workAnimations=[work])
+        expected = [idle, extra, variant, click, drag, landing, quota, move, turn]
+        with patch.object(self.pet, 'manifest', manifest), patch.object(self.pet, 'choose') as choose, \
+             patch.object(self.pet, 'refresh_quota') as refresh, patch('desktop.random.choice', return_value=move) as draw:
+            QTest.mouseClick(self.pet, Qt.MouseButton.LeftButton)
+            QTest.qWait(300)
+            draw.assert_called_once_with(expected)
+            choose.assert_called_once_with(move, interactive=True)
+            refresh.assert_not_called()
+
+            draw.reset_mock()
+            draw.return_value = landing
+            choose.reset_mock()
+            QTest.mouseClick(self.pet, Qt.MouseButton.LeftButton)
+            QTest.mouseClick(self.pet, Qt.MouseButton.LeftButton)
+            QTest.qWait(300)
+            draw.assert_called_once_with(expected)
+            choose.assert_called_once_with(landing, interactive=True)
+            refresh.assert_called_once_with(manual=True)
+
     def test_shortcut_failure_restores_state_and_gives_visible_feedback(self):
         before=self.pet.settings['on_top']
         with patch.object(self.pet,'save_settings',side_effect=OSError('isolated failure')),patch.object(self.pet,'say') as say:

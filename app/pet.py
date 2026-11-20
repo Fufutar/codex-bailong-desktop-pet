@@ -237,6 +237,8 @@ class Pet(QWidget):
     def single_click(self):
         self.last_click=None
         if self.variants:self.choose(random.choice(self.variants))
+    def double_click(self):
+        self.quota()
     def quota(self):
         self.click_timer.stop();self.last_click=None;self.generation+=1;token=self.generation
         self.play_click_sound()
@@ -292,7 +294,10 @@ class Pet(QWidget):
             else:self.idle()
             return
         now=time.monotonic()
-        if self.last_click is not None and now-self.last_click<=.25:self.quota()
+        if self.last_click is not None and now-self.last_click<=.25:
+            self.click_timer.stop()
+            self.last_click=None
+            self.double_click()
         else:self.last_click=now;self.click_timer.start()
     def closeEvent(self,event):
         self.tick.stop();self.bubble.close()

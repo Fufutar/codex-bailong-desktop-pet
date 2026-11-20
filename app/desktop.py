@@ -413,10 +413,18 @@ class DesktopPet(EnhancedPet):
         try:super().choose(item,interactive)
         finally:self._interactive_action=False;self._manual_action=False;self._priority=old
 
+    def click_action_pool(self):
+        work_ids={item['id'] for item in self.manifest.get('workAnimations',[]) if isinstance(item,dict)}
+        return [item for item in all_items(self.manifest) if item['id'] not in work_ids]
+
     def single_click(self):
         self.last_click=None;self.press_feedback=time.monotonic()
-        pool=self.manifest.get('clickAnimations') or [v for v in self.variants if v['id'] in ('01','08','09','10','11','17','20','26') ] or self.variants or self.idles
-        self.choose(random.choice(pool),interactive=True)
+        pool=self.click_action_pool()
+        if pool:self.choose(random.choice(pool),interactive=True)
+
+    def double_click(self):
+        self.single_click()
+        self.quota()
 
     def say(self,text,ms=4000):
         if self.enhanced_ready:
@@ -1148,7 +1156,7 @@ class DesktopPet(EnhancedPet):
 
     def action_groups(self):
         return {'待机':self.idles,'转向':self.manifest.get('turnAnimations',[]),'移动':self.manifest.get('moveAnimations',[]),
-            '点击回应':self.manifest.get('clickAnimations') or [v for v in self.variants if v['id'] in ('01','08','09','10','11')],
+            '点击回应':self.click_action_pool(),
             '互动动作':self.variants,'工作动作':[v for v in self.manifest.get('workAnimations',[]) if v], '额度回应（不刷新数据）':[self.manifest['quotaAnimation']] if self.manifest.get('quotaAnimation') else [],
             '拖拽':[self.manifest['dragAnimation']] if self.manifest.get('dragAnimation') else [],
             '落地':[self.manifest['landingAnimation']] if self.manifest.get('landingAnimation') else []}
